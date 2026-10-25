@@ -1,0 +1,47 @@
+.dwtm-wrap .dwtm-status { margin: 12px 0; }
+.dwtm-pill {
+	display: inline-block;
+	padding: 2px 8px;
+	margin-left: 4px;
+	border-radius: 10px;
+	background: #e0e0e0;
+	font-size: 12px;
+	line-height: 1.6;
+}
+.dwtm-pill.dwtm-ok { background: #d6f5e0; color: #14633a; }
+.dwtm-pill.dwtm-bad { background: #fbe2e2; color: #8a1f1f; }
+.dwtm-pill.dwtm-warn { background: #fcf3d6; color: #7a5b00; }
+.dwtm-tab { margin-top: 16px; }
+
+/* Connected state: read as success, not as a greyed-out disabled control. */
+.button.dwtm-connected[disabled],
+.button.dwtm-connected:disabled {
+	background: #1e7e46 !important;
+	border-color: #1e7e46 !important;
+	color: #fff !important;
+	opacity: 1 !important;
+	text-shadow: none !important;
+	cursor: default;
+}
+.button.dwtm-connected .dwtm-tick { font-weight: 700; margin-right: 2px; }
+.dwtm-feature-table { max-width: 640px; }
+.dwtm-upsell {
+	margin-top: 20px;
+	padding: 16px 20px;
+	border: 1px solid #c3c4c7;
+	border-left: 4px solid #2271b1;
+	background: #fff;
+	max-width: 640px;
+}
+.dwtm-upsell-steps {
+	margin: 4px 0 14px 0;
+	padding-left: 22px;
+	list-style: decimal;
+}
+.dwtm-upsell-steps li { margin-bottom: 4px; }
+.dwtm-metabox .dwtm-msg { display: block; margin-top: 8px; font-size: 12px; }
+.dwtm-metabox .dwtm-msg.dwtm-ok { color: #14633a; }
+.dwtm-metabox .dwtm-msg.dwtm-bad { color: #8a1f1f; }
+.dwtm-product-stock .dwtm-msg { margin-left: 8px; font-size: 12px; }
+.dwtm-product-stock .dwtm-msg.dwtm-ok { color: #14633a; }
+.dwtm-product-stock .dwtm-msg.dwtm-bad { color: #8a1f1f; }
