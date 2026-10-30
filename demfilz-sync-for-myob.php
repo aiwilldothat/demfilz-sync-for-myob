@@ -3,7 +3,7 @@
  * Plugin Name:       Demfilz Sync for MYOB
  * Plugin URI:        https://demfilz.com/demfilz-woo-to-myob
  * Description:       Send WooCommerce orders, customers and stock to MYOB (Business or AccountRight) via the official MYOB API. Free manual sync; Pro adds automation.
- * Version:           1.3.4
+ * Version:           1.3.5
  * Requires at least: 6.2
  * Requires PHP:      7.2
  * Requires Plugins:  woocommerce
@@ -18,7 +18,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'DWTM_VERSION', '1.3.4' );
+define( 'DWTM_VERSION', '1.3.5' );
 define( 'DWTM_FILE', __FILE__ );
 define( 'DWTM_DIR', plugin_dir_path( __FILE__ ) );
 define( 'DWTM_URL', plugin_dir_url( __FILE__ ) );

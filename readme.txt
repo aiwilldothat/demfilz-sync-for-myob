@@ -4,7 +4,7 @@ Tags: woocommerce, myob, accounting, invoices, inventory
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.2
-Stable tag: 1.3.4
+Stable tag: 1.3.5
 Requires Plugins: woocommerce
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -109,6 +109,9 @@ Yes, with Demfilz Gift Cards and Store Credit for WooCommerce. A gift card is a 
 
 == Changelog ==
 
+= 1.3.5 =
+* The Sync tab now offers both Pro plans directly: monthly (A$19.95) and yearly (A$199). Each button opens Stripe Checkout for this site, so the licence is issued for the right store.
+
 = 1.3.4 =
 * New: gift card and store credit support for Demfilz Gift Cards and Store Credit for WooCommerce. Gift cards sold post to a gift card liability account instead of income, and amounts paid by gift card or store credit post as a negative line against that account, so revenue and GST stay complete and the sale total matches the order total. Choose the account and tax code on the Mapping tab. Developers can report another gift card plugin's payments with the dwtm_gift_card_payments filter.
 * A gift card sold below its value (on sale or with a coupon) posts its full value to the gift card account and the difference as a discount on income, so the account always holds what customers can spend.
@@ -153,6 +156,9 @@ Yes, with Demfilz Gift Cards and Store Credit for WooCommerce. A gift card is a 
 * Initial release: OAuth connection (MYOB Business + AccountRight), manual order push, customer sync, manual stock pull, account/GST mapping, sync log, and the Pro licence framework.
 
 == Upgrade Notice ==
+
+= 1.3.5 =
+Sync tab now links both the monthly and the yearly Pro plan.
 
 = 1.3.4 =
 Adds gift card and store credit support. If you use Demfilz Gift Cards and Store Credit, choose a gift card account and tax code on the Mapping tab.
