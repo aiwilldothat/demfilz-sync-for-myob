@@ -59,7 +59,7 @@ do_action( 'dwtm_sync_tab_after', $dwtm_pro );
 			),
 			'https://api.demfilz.com/auto-order/subscribe'
 		);
-		$dwtm_sub_yearly = add_query_arg(
+		$dwtm_sub_yearly  = add_query_arg(
 			array(
 				'product' => 'demfilz-woo-to-myob-yearly',
 				'site'    => home_url(),

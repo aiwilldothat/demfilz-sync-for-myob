@@ -140,7 +140,7 @@ abstract class Dwtm_Abstract_Provider implements Dwtm_Provider {
 			'headers' => $headers,
 		);
 		if ( null !== $body ) {
-			$args['body'] = wp_json_encode( $body );
+			$args['body'] = $this->encode_body( $body );
 		}
 
 		$response = wp_remote_request( $url, $args );
@@ -172,6 +172,62 @@ abstract class Dwtm_Abstract_Provider implements Dwtm_Provider {
 		}
 
 		return is_array( $data ) ? $data : array();
+	}
+
+	/**
+	 * JSON-encode a request body so amounts go out as exact decimals.
+	 *
+	 * PHP's json_encode writes floats using the host's serialize_precision. Many cPanel
+	 * hosts set it to 100 (or 17), which turns 15.76 into 15.7599999999999997868...,
+	 * and MYOB rejects the whole request with "CommonRules_DecimalPrecision". So each
+	 * float is swapped for a placeholder before encoding and replaced afterwards with
+	 * a plain fixed-point number, independent of any PHP setting.
+	 *
+	 * @param array $body Payload.
+	 * @return string|false
+	 */
+	protected function encode_body( $body ) {
+		$numbers = array();
+		$prefix  = '__dwtm_num_' . wp_generate_password( 12, false ) . '_';
+		$swap    = function ( $value ) use ( &$swap, &$numbers, $prefix ) {
+			if ( is_array( $value ) ) {
+				return array_map( $swap, $value );
+			}
+			if ( is_float( $value ) ) {
+				$token             = $prefix . count( $numbers ) . '__';
+				$numbers[ $token ] = self::format_number( $value );
+				return $token;
+			}
+			return $value;
+		};
+
+		$json = wp_json_encode( $swap( $body ) );
+		if ( false === $json || empty( $numbers ) ) {
+			return $json;
+		}
+
+		// Each placeholder was encoded as a JSON string: replace it, quotes included, with the bare number.
+		$search  = array();
+		$replace = array();
+		foreach ( $numbers as $token => $number ) {
+			$search[]  = '"' . $token . '"';
+			$replace[] = $number;
+		}
+		return str_replace( $search, $replace, $json );
+	}
+
+	/**
+	 * Fixed-point JSON number for a float: up to 6 decimals, trailing zeros removed.
+	 *
+	 * @param float $value Value.
+	 * @return string
+	 */
+	protected static function format_number( $value ) {
+		if ( ! is_finite( $value ) ) {
+			return '0';
+		}
+		$number = rtrim( rtrim( sprintf( '%.6F', $value ), '0' ), '.' );
+		return ( '-0' === $number || '' === $number ) ? '0' : $number;
 	}
 
 	/**

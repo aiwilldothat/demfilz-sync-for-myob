@@ -6,7 +6,12 @@
  * Endpoint shapes mirror the live, proven AI Accounts AccountRight integration:
  *  - resource calls hang off each company file's own Uri
  *  - Sale/Invoice/Service (free-text lines against an income account - no MYOB items needed)
- *  - ex-GST line Totals with IsTaxInclusive=false, letting MYOB compute GST
+ *  - tax-inclusive line Totals (IsTaxInclusive=true): the MYOB sale total always equals
+ *    what the customer was charged, and MYOB derives the GST from each line's tax code.
+ *    Ex-tax totals made MYOB add GST on top, overstating every sale from a store whose
+ *    prices already include GST and which does not calculate tax in WooCommerce.
+ *  - updates start from the stored MYOB sale (RowVersion, Terms) and are skipped when
+ *    nothing changed since the last push
  *  - POST ...?returnBody=true to read back the created UID
  *  - contacts matched/created by CompanyName
  *
@@ -104,11 +109,26 @@ class Dwtm_Provider_Accountright extends Dwtm_Abstract_Provider {
 			return $found['Items'][0]['UID'];
 		}
 
+		// MYOB rejects a new customer card without SellingDetails, which must carry a tax
+		// code and a freight tax code ("SellingDetails is required").
+		$tax_uid     = (string) Dwtm_Settings::get( 'default_tax_code' );
+		$freight_uid = ( new Dwtm_Tax_Mapper() )->freight_code_uid();
+		if ( '' === $freight_uid ) {
+			$freight_uid = $tax_uid;
+		}
+		if ( '' === $tax_uid ) {
+			return new WP_Error( 'dwtm_no_tax_code', __( 'MYOB needs a tax code to create a new customer. Choose a default tax code on the Mapping tab, then sync the order again.', 'demfilz-sync-for-myob' ) );
+		}
+
 		$payload = array(
-			'CompanyName'  => $name,
-			'IsIndividual' => false,
-			'IsActive'     => true,
-			'Addresses'    => array(
+			'CompanyName'    => $name,
+			'IsIndividual'   => false,
+			'IsActive'       => true,
+			'SellingDetails' => array(
+				'TaxCode'        => array( 'UID' => $tax_uid ),
+				'FreightTaxCode' => array( 'UID' => $freight_uid ),
+			),
+			'Addresses'      => array(
 				array(
 					'Location' => 1,
 					'Email'    => $order->get_billing_email(),
@@ -139,7 +159,13 @@ class Dwtm_Provider_Accountright extends Dwtm_Abstract_Provider {
 	}
 
 	/**
-	 * Build Service invoice lines (ex-GST Totals; MYOB computes the GST).
+	 * Order meta holding a hash of the sale payload last pushed to MYOB.
+	 */
+	const META_SALE_HASH = '_dwtm_sale_hash';
+
+	/**
+	 * Build Service invoice lines as tax-inclusive Totals (what the customer paid per
+	 * line); MYOB derives the GST from each line's tax code.
 	 *
 	 * @param WC_Order $order Order.
 	 * @return array
@@ -155,7 +181,7 @@ class Dwtm_Provider_Accountright extends Dwtm_Abstract_Provider {
 			// A gift card being sold is money held for the customer: it posts to the gift card
 			// liability account, not to income.
 			$gift_sale = Dwtm_Gift_Cards::is_gift_card_sale( $item );
-			$total     = round( (float) $order->get_line_total( $item, false ), 2 );
+			$total     = round( (float) $order->get_line_total( $item, true ), 2 );
 			$face      = $gift_sale ? Dwtm_Gift_Cards::face_value( $item, $total ) : $total;
 			$lines[]   = array(
 				'Type'        => 'Transaction',
@@ -178,11 +204,12 @@ class Dwtm_Provider_Accountright extends Dwtm_Abstract_Provider {
 			}
 		}
 
-		if ( (float) $order->get_shipping_total() > 0 ) {
+		$shipping = round( (float) $order->get_shipping_total() + (float) $order->get_shipping_tax(), 2 );
+		if ( $shipping > 0 ) {
 			$lines[] = array(
 				'Type'        => 'Transaction',
 				'Description' => __( 'Shipping', 'demfilz-sync-for-myob' ),
-				'Total'       => round( (float) $order->get_shipping_total(), 2 ),
+				'Total'       => $shipping,
 				'Account'     => array( 'UID' => $inc_acct ),
 				'TaxCode'     => array( 'UID' => $tax_map->freight_code_uid() ),
 			);
@@ -191,7 +218,7 @@ class Dwtm_Provider_Accountright extends Dwtm_Abstract_Provider {
 		// Fees / surcharges (e.g. a payment surcharge added as a WooCommerce fee). A negative
 		// fee (a discount-style fee) posts as a negative line.
 		foreach ( $order->get_fees() as $fee ) {
-			$amount = round( (float) $fee->get_total(), 2 );
+			$amount = round( (float) $fee->get_total() + (float) $fee->get_total_tax(), 2 );
 			if ( 0.0 === $amount ) {
 				continue;
 			}
@@ -243,7 +270,7 @@ class Dwtm_Provider_Accountright extends Dwtm_Abstract_Provider {
 			'Number'                      => (string) $order->get_order_number(),
 			'Date'                        => $this->iso_date( $ts ),
 			'CustomerPurchaseOrderNumber' => (string) $order->get_order_number(),
-			'IsTaxInclusive'              => false,
+			'IsTaxInclusive'              => true,
 			'Lines'                       => $this->service_lines( $order ),
 			'Comment'                     => sprintf(
 				/* translators: %s: WooCommerce order number. */
@@ -253,16 +280,39 @@ class Dwtm_Provider_Accountright extends Dwtm_Abstract_Provider {
 			'JournalMemo'                 => 'Woo: ' . $order->get_formatted_billing_full_name(),
 		);
 
+		$hash = md5( (string) $this->encode_body( $payload ) );
+
 		if ( $existing_uid ) {
-			$payload['UID'] = $existing_uid;
-			$result         = $this->put( $this->cf_url( $path . '/' . $existing_uid ), $payload );
-			return is_wp_error( $result ) ? $result : $existing_uid;
+			// Unchanged since the last successful push (for example the same order moving
+			// from processing to completed): leave the MYOB sale alone, so a sale that has
+			// since been paid or edited in MYOB is not rewritten.
+			if ( $hash === (string) $order->get_meta( self::META_SALE_HASH ) ) {
+				return $existing_uid;
+			}
+
+			// A MYOB update replaces the whole sale and must carry its current RowVersion
+			// (and Terms, "Terms is required"), so start from the stored sale and lay our
+			// fields over it. Fields we do not manage (terms, addresses, salesperson) survive.
+			$current = $this->get( $this->cf_url( $path . '/' . $existing_uid ) );
+			if ( is_wp_error( $current ) ) {
+				return $current;
+			}
+			$update        = array_merge( $current, $payload );
+			$update['UID'] = $existing_uid;
+
+			$result = $this->put( $this->cf_url( $path . '/' . $existing_uid ), $update );
+			if ( is_wp_error( $result ) ) {
+				return $result;
+			}
+			$order->update_meta_data( self::META_SALE_HASH, $hash );
+			return $existing_uid;
 		}
 
 		$obj = $this->post( $this->cf_url( $path ), $payload );
 		if ( is_wp_error( $obj ) ) {
 			return $obj;
 		}
+		$order->update_meta_data( self::META_SALE_HASH, $hash );
 		if ( ! empty( $obj['UID'] ) ) {
 			return $obj['UID'];
 		}

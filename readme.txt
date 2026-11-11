@@ -4,7 +4,7 @@ Tags: woocommerce, myob, accounting, invoices, inventory
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.2
-Stable tag: 1.3.5
+Stable tag: 1.3.6
 Requires Plugins: woocommerce
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -109,6 +109,12 @@ Yes, with Demfilz Gift Cards and Store Credit for WooCommerce. A gift card is a 
 
 == Changelog ==
 
+= 1.3.6 =
+* Fix: orders from a customer who is not yet in MYOB failed with "SellingDetails is required". New customer cards now carry the tax code and freight tax code from the Mapping tab, as MYOB requires, so the customer is created and the sale syncs.
+* Fix: on hosts whose PHP sets serialize_precision to 17 or 100 (common on cPanel), amounts such as 15.76 were sent as 15.7599999999999997868... and MYOB rejected the sale with "CommonRules_DecimalPrecision". Request bodies are now encoded with exact decimals regardless of the host setting.
+* Fix: sales are now sent to MYOB tax inclusive, so the MYOB sale total always equals what the customer paid. Before, each line went out before tax and MYOB added GST on top, which overstated the sale by the GST amount whenever WooCommerce did not calculate tax itself (prices that already include GST).
+* Fix: syncing an order that is already in MYOB again (for example when it moves from processing to completed) failed with "Terms is required". The update now starts from the sale stored in MYOB, keeping its terms and other details, and is skipped when nothing in the order changed since the last sync.
+
 = 1.3.5 =
 * The Sync tab now offers both Pro plans directly: monthly (A$19.95) and yearly (A$199). Each button opens Stripe Checkout for this site, so the licence is issued for the right store.
 
@@ -156,6 +162,9 @@ Yes, with Demfilz Gift Cards and Store Credit for WooCommerce. A gift card is a 
 * Initial release: OAuth connection (MYOB Business + AccountRight), manual order push, customer sync, manual stock pull, account/GST mapping, sync log, and the Pro licence framework.
 
 == Upgrade Notice ==
+
+= 1.3.6 =
+Important sync fixes: new customers ("SellingDetails is required"), amounts on some hosts ("CommonRules_DecimalPrecision"), re-syncs ("Terms is required"), and sales now go to MYOB tax inclusive so the MYOB total matches the order total. Update recommended.
 
 = 1.3.5 =
 Sync tab now links both the monthly and the yearly Pro plan.

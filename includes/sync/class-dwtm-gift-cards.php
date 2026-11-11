@@ -92,7 +92,7 @@ class Dwtm_Gift_Cards {
 	 * discount. Never less than the line total.
 	 *
 	 * @param WC_Order_Item_Product $item       Order line that sells a gift card.
-	 * @param float                 $line_total Line total before tax.
+	 * @param float                 $line_total Line total as charged (tax inclusive).
 	 * @return float
 	 */
 	public static function face_value( $item, $line_total ) {
