@@ -188,8 +188,9 @@ abstract class Dwtm_Abstract_Provider implements Dwtm_Provider {
 	 */
 	protected function encode_body( $body ) {
 		$numbers = array();
-		$prefix  = '__dwtm_num_' . wp_generate_password( 12, false ) . '_';
-		$swap    = function ( $value ) use ( &$swap, &$numbers, $prefix ) {
+		// Letters and digits only, so json_encode never escapes the placeholder (a random_password filter could add other characters).
+		$prefix = '__dwtm_num_' . preg_replace( '/[^A-Za-z0-9]/', '', wp_generate_password( 12, false ) ) . '_';
+		$swap   = function ( $value ) use ( &$swap, &$numbers, $prefix ) {
 			if ( is_array( $value ) ) {
 				return array_map( $swap, $value );
 			}

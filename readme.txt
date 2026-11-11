@@ -4,7 +4,7 @@ Tags: woocommerce, myob, accounting, invoices, inventory
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.2
-Stable tag: 1.3.6
+Stable tag: 1.3.7
 Requires Plugins: woocommerce
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -109,6 +109,9 @@ Yes, with Demfilz Gift Cards and Store Credit for WooCommerce. A gift card is a 
 
 == Changelog ==
 
+= 1.3.7 =
+* Hardening: the placeholder used to send exact decimal amounts is now letters and digits only. If another plugin changed WordPress's random password generator to add symbols, an amount could have been sent as placeholder text and the sync rejected.
+
 = 1.3.6 =
 * Fix: orders from a customer who is not yet in MYOB failed with "SellingDetails is required". New customer cards now carry the tax code and freight tax code from the Mapping tab, as MYOB requires, so the customer is created and the sale syncs.
 * Fix: on hosts whose PHP sets serialize_precision to 17 or 100 (common on cPanel), amounts such as 15.76 were sent as 15.7599999999999997868... and MYOB rejected the sale with "CommonRules_DecimalPrecision". Request bodies are now encoded with exact decimals regardless of the host setting.
@@ -162,6 +165,9 @@ Yes, with Demfilz Gift Cards and Store Credit for WooCommerce. A gift card is a 
 * Initial release: OAuth connection (MYOB Business + AccountRight), manual order push, customer sync, manual stock pull, account/GST mapping, sync log, and the Pro licence framework.
 
 == Upgrade Notice ==
+
+= 1.3.7 =
+Hardens the exact-decimal amounts added in 1.3.6 against plugins that change the random password generator.
 
 = 1.3.6 =
 Important sync fixes: new customers ("SellingDetails is required"), amounts on some hosts ("CommonRules_DecimalPrecision"), re-syncs ("Terms is required"), and sales now go to MYOB tax inclusive so the MYOB total matches the order total. Update recommended.
